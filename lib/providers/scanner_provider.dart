@@ -4,6 +4,7 @@ import 'package:scanner_app/scanners/scanner_service.dart';
 import 'package:scanner_app/scanners/scanner_factory.dart';
 
 class ScannerProvider extends ChangeNotifier {
+
   ScannerService? _scannerService;
   ScannerService? get scannerService => _scannerService;
 
