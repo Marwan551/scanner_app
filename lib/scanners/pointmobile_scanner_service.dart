@@ -10,25 +10,41 @@ class PointMobileScannerService implements ScannerService {
   @override
   Future<void> initScan({required void Function(ScanResultNormalized) onScan}) async {
     _onScan = onScan;
+    debugPrint('PointMobileScannerService: initScan started');
+    if (_isInitialized) {
+      debugPrint('PointMobileScannerService: Already initialized');
+      return;
+    }
     try {
-      if (!await PMScanner.isDevicePointMobile()) {
+      final isPM = await PMScanner.isDevicePointMobile();
+      debugPrint('PointMobile isDevicePointMobile: $isPM');
+      if (!isPM) {
+        debugPrint('PointMobileScannerService: Not a PointMobile device');
         return;
       }
-      await PMScanner.initScanner(
-          resultType: ResultType.clipboardKeycodePaste);
+
+      await PMScanner.initScanner(resultType: ResultType.clipboardKeycodePaste);
+      await PMUtils.listenClipboard();
       PMScanner.onDecode = _onDecode;
       _isInitialized = true;
-      debugPrint("PointMobile Scanner Initialized");
-    } catch(e) {
-      debugPrint('Error initializing PointMobile Scanner: $e');
+      debugPrint("PointMobile Scanner Initialized successfully");
+      debugPrint('------------------------------------------------------------------------');
+      debugPrint('PointMobileScannerService: _onDecode registered: ${PMScanner.onDecode != null}');
+      debugPrint('------------------------------------------------------------------------');
+
+    } catch (e, stackTrace) {
+      debugPrint('Error initializing PointMobile Scanner: $e\n$stackTrace');
     }
   }
 
   @override
   Future<void> disposeScan() async {
+    debugPrint('PointMobileScannerService: disposeScan called');
     try {
-      PMScanner.triggerOnOff(isOn: false);
-    } catch(e) {
+      await PMScanner.triggerOnOff(isOn: false);
+      await PMUtils.stopListeningClipboard();
+      debugPrint('PointMobile Scanner trigger turned off and stopped listening clipboard');
+    } catch (e) {
       debugPrint('Error disposing PointMobile Scanner: $e');
     }
     PMScanner.onDecode = null;
@@ -37,18 +53,21 @@ class PointMobileScannerService implements ScannerService {
 
   @override
   Future<void> triggerScan() async {
+    debugPrint('PointMobileScannerService: triggerScan called (_isInitialized: $_isInitialized)');
     if (!_isInitialized) {
       debugPrint('PointMobile Scanner not initialized');
       return;
     }
     try {
       await PMScanner.triggerOnOff(isOn: true);
-    } catch(e) {
-      debugPrint('Error triggering PointMobile Scanner: $e');
+      debugPrint('PointMobile software trigger turned ON');
+    } catch (e, stackTrace) {
+      debugPrint('Error triggering PointMobile Scanner: $e\n$stackTrace');
     }
   }
 
   void _onDecode(Symbology symbology, String barcodeNumber) {
+    debugPrint('PointMobile onDecode -> code: $barcodeNumber, symbology: $symbology');
     final item = ScanResultNormalized(
         code: barcodeNumber,
         symbology: symbology.toString(),
